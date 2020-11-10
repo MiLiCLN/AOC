@@ -63,10 +63,13 @@ CLASS zcl_aoc_super DEFINITION
         VALUE(rv_bool) TYPE abap_bool .
     METHODS is_generated
       IMPORTING
-        !iv_name       TYPE csequence OPTIONAL
+        !iv_name            TYPE csequence OPTIONAL
       RETURNING
         VALUE(rv_generated) TYPE abap_bool .
-    METHODS set_uses_checksum .
+    METHODS enable_checksum.
+    METHODS is_checksum_enabled
+      RETURNING
+        VALUE(rv_enabled) TYPE abap_bool.
     METHODS insert_scimessage
       IMPORTING
         !iv_code TYPE scimessage-code
@@ -85,7 +88,8 @@ CLASS zcl_aoc_super DEFINITION
     TYPES:
       ty_source_tt TYPE SORTED TABLE OF ty_source WITH UNIQUE KEY name .
 
-    DATA mt_source TYPE ty_source_tt .
+    DATA mt_source TYPE ty_source_tt.
+    DATA mv_uses_checksum TYPE abap_bool.
 
     METHODS check_class
       IMPORTING
@@ -99,6 +103,15 @@ CLASS zcl_aoc_super DEFINITION
         !iv_line         TYPE token_row
       RETURNING
         VALUE(rv_skip)   TYPE abap_bool .
+    METHODS get_checksum
+      IMPORTING
+        !iv_position       TYPE int4
+      RETURNING
+        VALUE(rv_checksum) TYPE int4.
+    METHODS set_uses_checksum
+      IMPORTING
+        !iv_enable TYPE abap_bool DEFAULT abap_true.
+
 ENDCLASS.
 
 
@@ -256,6 +269,11 @@ CLASS zcl_aoc_super IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD enable_checksum.
+    mv_uses_checksum = abap_true.
+  ENDMETHOD.
+
+
   METHOD enable_rfc.
 * RFC enable the check, new feature for central ATC on 7.51
 
@@ -273,6 +291,42 @@ CLASS zcl_aoc_super IMPLEMENTATION.
   METHOD get_attributes.
 
     EXPORT mv_errty = mv_errty TO DATA BUFFER p_attributes.
+
+  ENDMETHOD.
+
+
+  METHOD get_checksum.
+
+    DATA: ls_statement TYPE sstmnt,
+          ls_checksum  TYPE sci_crc64.
+
+    IF is_checksum_enabled( ) = abap_false.
+      RETURN.
+    ENDIF.
+
+    READ TABLE ref_scan->statements INDEX iv_position  INTO ls_statement.
+
+    IF sy-subrc <> 0 OR ls_statement-type = 'P' OR ls_statement-type = 'S' OR ls_statement-type = 'G'.
+      set_uses_checksum( abap_false ).
+    ELSE.
+
+      TRY.
+* parameter "p_version" does not exist in 751
+* value p_version = '2' does not exist in 752
+          CALL METHOD ('GET_STMT_CHECKSUM')
+            EXPORTING
+              p_position = iv_position
+            CHANGING
+              p_checksum = ls_checksum
+            EXCEPTIONS
+              error      = 0.
+        CATCH cx_sy_dyn_call_illegal_method cx_sy_dyn_call_param_not_found.
+          RETURN.
+      ENDTRY.
+
+      rv_checksum = ls_checksum-i1.
+
+    ENDIF.
 
   ENDMETHOD.
 
@@ -368,13 +422,18 @@ CLASS zcl_aoc_super IMPLEMENTATION.
 
   METHOD if_ci_test~display_documentation.
 
-    DATA: lv_url TYPE string VALUE 'http://docs.abapopenchecks.org/checks/' ##NO_TEXT,
-          lv_len TYPE i.
+    DATA: lv_url    TYPE string VALUE 'http://docs.abapopenchecks.org/checks/' ##NO_TEXT,
+          lt_string TYPE STANDARD TABLE OF string,
+          lv_num    TYPE string,
+          lv_lines  TYPE i.
 
+    SPLIT myname AT '_' INTO TABLE lt_string.
 
-    lv_len = strlen( myname ) - 2.
+    lv_lines = lines( lt_string ).
 
-    CONCATENATE lv_url myname+lv_len(2) INTO lv_url.
+    READ TABLE lt_string INTO lv_num INDEX lv_lines.
+
+    CONCATENATE lv_url lv_num INTO lv_url.
 
     cl_gui_frontend_services=>execute(
       EXPORTING
@@ -412,7 +471,8 @@ CLASS zcl_aoc_super IMPLEMENTATION.
           lv_skip         TYPE abap_bool,
           lv_sub_obj_type LIKE p_sub_obj_type,
           lv_line         LIKE p_line,
-          lv_column       LIKE p_column.
+          lv_column       LIKE p_column,
+          lv_checksum_1   TYPE int4.
 
     FIELD-SYMBOLS: <ls_message> LIKE LINE OF scimessages.
 
@@ -504,6 +564,14 @@ CLASS zcl_aoc_super IMPLEMENTATION.
       ENDIF.
     ENDIF.
 
+    set_uses_checksum( is_checksum_enabled( ) ).
+
+    IF sy-subrc = 0 AND p_checksum_1 IS NOT INITIAL.
+      lv_checksum_1 = p_checksum_1.
+    ELSE.
+      lv_checksum_1 = get_checksum( p_position ).
+    ENDIF.
+
     super->inform(
         p_sub_obj_type = lv_sub_obj_type
         p_sub_obj_name = p_sub_obj_name
@@ -519,8 +587,11 @@ CLASS zcl_aoc_super IMPLEMENTATION.
         p_param_2      = p_param_2
         p_param_3      = p_param_3
         p_param_4      = p_param_4
-        p_inclspec     = p_inclspec ).
-* parameters p_detail and p_checksum_1 does not exist in 730
+        p_inclspec     = p_inclspec
+        p_detail       = p_detail
+        p_checksum_1   = lv_checksum_1 ).
+
+    set_uses_checksum( is_checksum_enabled( ) ).
 
   ENDMETHOD.
 
@@ -538,6 +609,11 @@ CLASS zcl_aoc_super IMPLEMENTATION.
 
     INSERT ls_scimessage INTO TABLE scimessages.
 
+  ENDMETHOD.
+
+
+  METHOD is_checksum_enabled.
+    rv_enabled = mv_uses_checksum.
   ENDMETHOD.
 
 
@@ -645,10 +721,13 @@ CLASS zcl_aoc_super IMPLEMENTATION.
 
     FIELD-SYMBOLS: <lv_uses_checksum> TYPE abap_bool.
 
+    IF is_checksum_enabled( ) = abap_false.
+      RETURN.
+    ENDIF.
 
     ASSIGN ('USES_CHECKSUM') TO <lv_uses_checksum>.
     IF sy-subrc = 0.
-      <lv_uses_checksum> = abap_true.
+      <lv_uses_checksum> = iv_enable.
     ENDIF.
 
   ENDMETHOD.

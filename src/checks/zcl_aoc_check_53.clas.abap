@@ -146,7 +146,7 @@ CLASS zcl_aoc_check_53 IMPLEMENTATION.
     attributes_ok  = abap_true.
 
     enable_rfc( ).
-    set_uses_checksum( ).
+    enable_checksum( ).
 
     insert_scimessage(
         iv_code = '001'
@@ -248,7 +248,7 @@ CLASS zcl_aoc_check_53 IMPLEMENTATION.
     zzaoc_fill_att mv_ws_filename 'WS_FILENAME_GET' ''.     "#EC NOTEXT
     zzaoc_fill_att mv_f4_filename 'F4_FILENAME' ''.         "#EC NOTEXT
     zzaoc_fill_att mv_base64 'Base 64' ''.                  "#EC NOTEXT
-    zzaoc_fill_att mv_base64 'Binary conversions' ''.       "#EC NOTEXT
+    zzaoc_fill_att mv_binary 'Binary conversions' ''.       "#EC NOTEXT
 
     zzaoc_popup.
 
