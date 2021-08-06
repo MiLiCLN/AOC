@@ -655,8 +655,11 @@ CLASS zcl_aoc_super IMPLEMENTATION.
 
   METHOD is_generated.
 
-    SELECT COUNT(*)
+    DATA lv_genflag TYPE tadir-genflag.
+
+    SELECT SINGLE genflag
       FROM tadir
+      INTO lv_genflag
       WHERE pgmid    = 'R3TR'
         AND object   = object_type
         AND obj_name = object_name
