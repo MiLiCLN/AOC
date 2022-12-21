@@ -46,7 +46,7 @@ ENDCLASS.
 
 
 
-CLASS zcl_aoc_check_59 IMPLEMENTATION.
+CLASS ZCL_AOC_CHECK_59 IMPLEMENTATION.
 
 
   METHOD analyze.
@@ -56,7 +56,7 @@ CLASS zcl_aoc_check_59 IMPLEMENTATION.
           ls_count  LIKE LINE OF lt_counts,
           lo_node   TYPE REF TO zcl_aoc_boolean_node.
 
-    FIELD-SYMBOLS: <ls_token> LIKE LINE OF it_tokens.
+    FIELD-SYMBOLS <ls_token> LIKE LINE OF it_tokens.
 
 
     READ TABLE it_tokens INDEX 1 ASSIGNING <ls_token>.
@@ -67,6 +67,7 @@ CLASS zcl_aoc_check_59 IMPLEMENTATION.
     CASE <ls_token>-str.
       WHEN 'IF' OR 'ELSEIF' OR 'WHILE' OR 'CHECK'.
 * nothing
+        CLEAR lt_tokens.
       WHEN 'ASSERT'.
         READ TABLE it_tokens INDEX 2 ASSIGNING <ls_token>.
         ASSERT sy-subrc = 0.
@@ -107,7 +108,6 @@ CLASS zcl_aoc_check_59 IMPLEMENTATION.
         RETURN.
       ENDIF.
     ENDLOOP.
-
 
   ENDMETHOD.
 
@@ -167,16 +167,16 @@ CLASS zcl_aoc_check_59 IMPLEMENTATION.
     mv_parser_errors = abap_true.
 
     insert_scimessage(
-        iv_code = '001'
-        iv_text = 'abapOpenChecks boolean parser error'(m01) ).
+      iv_code = '001'
+      iv_text = 'abapOpenChecks boolean parser error'(m01) ).
 
     insert_scimessage(
-        iv_code = '002'
-        iv_text = 'Superfluous parentheses'(m02) ).
+      iv_code = '002'
+      iv_text = 'Superfluous parentheses'(m02) ).
 
     insert_scimessage(
-        iv_code = '003'
-        iv_text = 'Too few parentheses'(m03) ).
+      iv_code = '003'
+      iv_text = 'Too few parentheses'(m03) ).
 
   ENDMETHOD.
 
@@ -217,9 +217,9 @@ CLASS zcl_aoc_check_59 IMPLEMENTATION.
   METHOD walk.
 
     DATA: lt_children_node TYPE zcl_aoc_boolean_node=>ty_children_tt,
-          lo_child    TYPE REF TO zcl_aoc_boolean_node,
-          lt_children TYPE ty_counts_tt,
-          ls_child    LIKE LINE OF lt_children.
+          lo_child         TYPE REF TO zcl_aoc_boolean_node,
+          lt_children      TYPE ty_counts_tt,
+          ls_child         LIKE LINE OF lt_children.
 
     FIELD-SYMBOLS: <ls_count> LIKE LINE OF rt_counts.
 
